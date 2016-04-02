@@ -43,7 +43,7 @@
         (loop [current 0 steps 0 history {}]
           (if (history current)
             (swap! cache-loops-to-finish assoc inc-per-loop history)
-            (recur (rem (+ current inc-per-loop)
+            (recur (rem (+ current reverse-inc-per-loop)
                         256)
                    (inc steps)
                    (assoc history current steps))))))))
@@ -104,9 +104,8 @@
 (defn compile-source [source]
   (let [compiled (tokenize source)
         _ (println (str "Tokenized: " compiled))
-        ; These lines break the Hello World test.
-        ;compiled (optimize-incrementing-loops compiled)
-        ;_ (println (str "Optimize by loop compression: " compiled))
+        compiled (optimize-incrementing-loops compiled)
+        _ (println (str "Optimize by loop compression: " compiled))
         compiled (match-brackets compiled)
         _ (println (str "Optimize by matching brackets: " compiled))]
     compiled))
@@ -211,10 +210,10 @@
                  (operation op op-data)
                  (update-in [:instruction-pointer] inc))
         end-op-millis (.getTime (java.util.Date.))
-        ;_ (println (str op "(" op-data ") ... "
-        ;                " prep:" (- start-op-millis start-op-prep-millis)
-        ;                " op:" (- end-op-millis start-op-millis)
-        ;                " total:" (- end-op-millis start-millis)))
+        _ (println (str op "(" op-data ") ...\n" result "\n"))
+                        ;" prep:" (- start-op-millis start-op-prep-millis)
+                        ;" op:" (- end-op-millis start-op-millis)
+                        ;" total:" (- end-op-millis start-millis)))
         ]
     result))
 
@@ -226,7 +225,7 @@
           (>= (:instruction-pointer bf)
               (count (:instructions bf)))
             (apply str (:output bf))
-          (> (- start-op-prep-millis start-millis) 5000)
+          (> (- start-op-prep-millis start-millis) 15000)
             "Timeout"
           :else
             (recur (execute-once bf start-millis start-op-prep-millis) start-millis))))
