@@ -48,6 +48,12 @@
   (testing "insufficient input"
     (is (nil? (execute-string "," "")))))
 
+(deftest bracket-matching-test
+  (testing "nested brackets are properly indexed"
+    (is (= (compile-source "+[>.+<+]+[+[+>.<]]")
+           [["+" 1] ["[" 7] [">" 1] ["." 1] ["+" 1] ["<" 1] ["+" 1] ["]" 1] ["+" 1]
+            ["[" 17] ["+" 1] ["[" 16] ["+" 1] [">" 1] ["." 1] ["<" 1] ["]" 11] ["]" 9]]))))
+
 (deftest complex-tests
   (testing "Hello World!"
     (is (= (execute-string

@@ -25,8 +25,19 @@
                                (range (count tokens)))
         right-positions (filter #(= ["]"] (get tokens %))
                                 (range (count tokens)))
-        bracket-matches (merge (zipmap left-positions right-positions)
-                               (zipmap right-positions left-positions))]
+        all-positions (sort (concat left-positions right-positions))
+        matching-right-positions (map (fn [left-pos]
+                                        (loop [remaining (drop-while #(<= % left-pos) all-positions)
+                                               nesting-level 0]
+                                          (assert (not-empty remaining))
+                                          (let [next-pos (first remaining)
+                                                is-left (some #{next-pos} left-positions)]
+                                            (cond is-left (recur (rest remaining) (inc nesting-level))
+                                                  (= 0 nesting-level) next-pos
+                                                  :else (recur (rest remaining) (dec nesting-level))))))
+                                      left-positions)
+        bracket-matches (merge (zipmap left-positions matching-right-positions)
+                               (zipmap matching-right-positions left-positions))]
     (vec (map (fn [token index]
                 (cond (= token ["["]) ["[" (bracket-matches index)]
                       (= token ["]"]) ["]" (bracket-matches index)]
@@ -103,11 +114,12 @@
 
 (defn compile-source [source]
   (let [compiled (tokenize source)
-        _ (println (str "Tokenized: " compiled))
+        ;_ (println (str "Tokenized: " compiled))
         compiled (optimize-incrementing-loops compiled)
-        _ (println (str "Optimize by loop compression: " compiled))
+        ;_ (println (str "Optimize by loop compression: " compiled))
         compiled (match-brackets compiled)
-        _ (println (str "Optimize by matching brackets: " compiled))]
+        ;_ (println (str "Optimize by matching brackets: " compiled))
+        ]
     compiled))
     
 (defn create-bf [instructions input]
@@ -131,20 +143,20 @@
   (fn [bf op op-data] op))
 
 (defmethod operation "loop" [bf op op-data]
-  (println (str "Executing loop operation with op " op " and data " op-data))
+  ;(println (str "Executing loop operation with op " op " and data " op-data))
   (let [start-increment (op-data :start)
         start-index (:data-pointer bf)
         start-data (current-data bf)
         other-increments (:others op-data)
-        _ (println (str "start-index: " start-index
-                        ", start-data: " start-data
-                        ", start-increment: " start-increment
-                        ", other-increments: " other-increments))
+        ;_ (println (str "start-index: " start-index
+        ;                ", start-data: " start-data
+        ;                ", start-increment: " start-increment
+        ;                ", other-increments: " other-increments))
         start-to-num-loops (@cache-loops-to-finish start-increment)
         _ (assert start-to-num-loops (str "loops-to-finish not precalculated for " start-increment))
-        _ (println (str "Pre-calculated loop data: " start-to-num-loops))
+        ;_ (println (str "Pre-calculated loop data: " start-to-num-loops))
         num-loops (start-to-num-loops (current-data bf))
-        _ (println (str "Expected number of loops: " num-loops))
+        ;_ (println (str "Expected number of loops: " num-loops))
         _ (assert num-loops (str "Infinite loop for starting data " (current-data bf)
                                  ", increment " start-increment
                                  ", precalculated paths " start-to-num-loops))
@@ -159,9 +171,9 @@
                                                              256)]
                                            [abs-index new-data]))
                                        other-increments)))
-        _ (println (str "Data changes: " data-changes))
+        ;_ (println (str "Data changes: " data-changes))
         new-bf (update-in bf [:data] merge data-changes)]
-    (println (str "Finished loop operation with bf: " new-bf))
+    ;(println (str "Finished loop operation with bf: " new-bf))
     new-bf))
   
 (defmethod operation ">" [bf op op-data]
@@ -206,11 +218,12 @@
         op (first instruction)
         op-data (second instruction)
         start-op-millis (.getTime (java.util.Date.))
+        ;_ (println (str "\n" (:instruction-pointer bf) ":" op "(" op-data ") ..."))
         result (-> bf
                  (operation op op-data)
                  (update-in [:instruction-pointer] inc))
         end-op-millis (.getTime (java.util.Date.))
-        _ (println (str op "(" op-data ") ...\n" result "\n"))
+        ;_ (println (str op "(" op-data ") ...\n")) ; result "\n"))
                         ;" prep:" (- start-op-millis start-op-prep-millis)
                         ;" op:" (- end-op-millis start-op-millis)
                         ;" total:" (- end-op-millis start-millis)))
@@ -225,8 +238,8 @@
           (>= (:instruction-pointer bf)
               (count (:instructions bf)))
             (apply str (:output bf))
-          (> (- start-op-prep-millis start-millis) 15000)
-            "Timeout"
+          (> (- start-op-prep-millis start-millis) 8000)
+            (apply str "Timeout: " (:output bf))
           :else
             (recur (execute-once bf start-millis start-op-prep-millis) start-millis))))
 
@@ -237,14 +250,14 @@
   Either returns a sequence of output characters, or `nil` if there was
   insufficient input."
   [source input]
-  (println (str "Starting execution at " (java.util.Date.)))
-  (println (str "Source: " source))
-  (let [compiled (time (compile-source source))
+  ;(println (str "Starting execution at " (java.util.Date.)))
+  ;(println (str "Source: " source))
+  (let [compiled (compile-source source)
         bf (create-bf compiled input)
         ;_ (println (str "Compiled source: " compiled))
-        _ (println (str "Input(" (count input) "): " (vec (take 50 input))))
+        ;_ (println (str "Input(" (count input) "): " (vec (take 50 input))))
         result (execute-to-end bf (.getTime (java.util.Date.)))
-        _ (println (str "Final result at " (java.util.Date.) ": " result))
+        ;_ (println (str "Final result at " (java.util.Date.) ": " result))
         ]
     result))
 
